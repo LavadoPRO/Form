@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realizar Pedido - Lavao</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233B82F6' stroke-width='1.5'%3E%3Cpath d='M4.531 12.5l5.25 5.25.75-.75-3-3 10.5-.75 2.25 3.75 1.5.75L20.25 12l-1.531-6.75-5.25.75-2.25 3.75-6.75-1.5Z'/%3E%3C/svg%3E">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Configuración personalizada de Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+</head>
+<body class="bg-gray-100 font-inter flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-lg">
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-8 md:p-12">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-blue-600">Lavao</h1>
+                    <h2 class="mt-4 text-2xl font-bold leading-9 tracking-tight text-gray-800">Realiza tu Pedido</h2>
+                    <p class="mt-2 text-sm text-gray-600">Completa el formulario y nos pondremos en contacto.</p>
+                </div>
+                
+                <form id="order-form" class="space-y-6">
+                    <div>
+                        <label for="customer-name" class="block text-sm font-medium leading-6 text-gray-900">Nombre y Apellido</label>
+                        <div class="mt-2">
+                            <input id="customer-name" name="customer-name" type="text" autocomplete="name" required class="block w-full rounded-lg border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition duration-300" placeholder="Ej: Juan Pérez">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="address" class="block text-sm font-medium leading-6 text-gray-900">Dirección de Recogida</label>
+                        <div class="mt-2">
+                            <input id="address" name="address" type="text" autocomplete="street-address" required class="block w-full rounded-lg border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition duration-300" placeholder="Ej: Calle 50 # 20-30, Apto 101">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="pairs" class="block text-sm font-medium leading-6 text-gray-900">Número de Pares de Zapatos</label>
+                        <div class="mt-2">
+                            <input id="pairs" name="pairs" type="number" min="1" required class="block w-full rounded-lg border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition duration-300" placeholder="Ej: 3">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="phone" class="block text-sm font-medium leading-6 text-gray-900">Número de Celular</label>
+                        <div class="mt-2">
+                            <input id="phone" name="phone" type="tel" autocomplete="tel" required class="block w-full rounded-lg border-0 py-3 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition duration-300" placeholder="Ej: 3001234567">
+                        </div>
+                    </div>
+                    
+                    <div id="form-feedback" class="hidden text-center p-4 rounded-lg"></div>
+
+                    <div>
+                        <button type="submit" id="submit-btn" class="flex w-full justify-center rounded-lg bg-blue-600 px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition duration-300 transform hover:scale-105">
+                            <span id="submit-text">Enviar Pedido</span>
+                            <div id="submit-loader" class="hidden animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const orderForm = document.getElementById('order-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitText = document.getElementById('submit-text');
+        const submitLoader = document.getElementById('submit-loader');
+        const formFeedback = document.getElementById('form-feedback');
+        
+        const WEBHOOK_URL = 'https://webhook.wipti.com/webhook/Form/Lavao';
+
+        orderForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            // --- Mostrar estado de carga ---
+            submitText.classList.add('hidden');
+            submitLoader.classList.remove('hidden');
+            submitBtn.disabled = true;
+            formFeedback.classList.add('hidden');
+
+            // --- Generar ID aleatorio ---
+            const randomId = `LP-${Math.floor(Math.random() * 900) + 100}`;
+            
+            // --- Recolectar datos del formulario ---
+            const customerName = document.getElementById('customer-name').value;
+            const address = document.getElementById('address').value;
+            const pairs = document.getElementById('pairs').value;
+            const phone = document.getElementById('phone').value;
+            
+            // --- Crear el objeto de datos para enviar ---
+            const orderData = {
+                id: randomId,
+                customer: customerName,
+                address: address,
+                items: Number(pairs), // Asegurarse de que 'items' sea un número
+                phone: phone,
+                status: 'pendiente de recogida' // Estado inicial por defecto
+            };
+
+            try {
+                // --- Enviar datos al Webhook ---
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status}`);
+                }
+                
+                // --- Mostrar mensaje de éxito ---
+                formFeedback.textContent = '¡Tu pedido ha sido enviado con éxito! Nos pondremos en contacto contigo pronto.';
+                formFeedback.className = 'text-center p-4 rounded-lg bg-green-100 text-green-800';
+                formFeedback.classList.remove('hidden');
+                orderForm.reset(); // Limpiar el formulario
+
+            } catch (error) {
+                console.error('Error al enviar el formulario:', error);
+                // --- Mostrar mensaje de error ---
+                formFeedback.textContent = 'Hubo un error al enviar tu pedido. Por favor, inténtalo de nuevo.';
+                formFeedback.className = 'text-center p-4 rounded-lg bg-red-100 text-red-800';
+                formFeedback.classList.remove('hidden');
+            } finally {
+                // --- Restaurar el botón de envío ---
+                submitText.classList.remove('hidden');
+                submitLoader.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+
